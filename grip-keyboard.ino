@@ -37,6 +37,8 @@ bool hasAlt = true;
 bool hasControl = true;
 bool hasOsGui = true;
 
+long idleTime = 0;
+
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
 #define SCREEN_HEIGHT 32 // OLED display height, in pixels
 
@@ -49,26 +51,42 @@ bool hasOsGui = true;
 #define SCREEN_ADDRESS 0x3C ///< See datasheet for Address; 0x3D for 128x64, 0x3C for 128x32
 	Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
-#define LOGO_HEIGHT 16
-#define LOGO_WIDTH 16
-static const unsigned char PROGMEM logo_bmp[] = {
-	0b00000000, 0b11000000,
-	0b00000001, 0b11000000,
-	0b00000001, 0b11000000,
-	0b00000011, 0b11100000,
-	0b11110011, 0b11100000,
-	0b11111110, 0b11111000,
-	0b01111110, 0b11111111,
-	0b00110011, 0b10011111,
-	0b00011111, 0b11111100,
-	0b00001101, 0b01110000,
-	0b00011011, 0b10100000,
-	0b00111111, 0b11100000,
-	0b00111111, 0b11110000,
-	0b01111100, 0b11110000,
-	0b01110000, 0b01110000,
-	0b00000000, 0b00110000
-};
+#define MOD_ICON_HEIGHT 16
+#define MOD_ICON_WIDTH 16
+// 'pixil-layer-alt', 16x16px
+const unsigned char epd_bitmap_pixil_layer_alt[] PROGMEM = {
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x80, 0x02, 0x40, 0x02, 0x40, 0x02, 0x40,
+	0x03, 0xc0, 0x02, 0x40, 0x02, 0x40, 0x02, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+// 'pixil-layer-base', 16x16px
+const unsigned char epd_bitmap_pixil_layer_base[] PROGMEM = {
+	0x00, 0x00, 0x3f, 0xfc, 0x40, 0x02, 0x40, 0x02, 0x40, 0x02, 0x40, 0x02, 0x40, 0x02, 0x40, 0x02,
+	0x40, 0x02, 0x40, 0x02, 0x40, 0x02, 0x40, 0x02, 0x40, 0x02, 0x40, 0x02, 0x3f, 0xfc, 0x00, 0x00};
+// 'pixil-layer-control', 16x16px
+const unsigned char epd_bitmap_pixil_layer_control[] PROGMEM = {
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x80, 0x02, 0x40, 0x02, 0x00, 0x02, 0x00,
+	0x02, 0x00, 0x02, 0x00, 0x02, 0x40, 0x01, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+// 'pixil-layer-highlight', 16x16px
+const unsigned char epd_bitmap_pixil_layer_highlight[] PROGMEM = {
+	0x00, 0x00, 0x00, 0x00, 0x3f, 0xfc, 0x30, 0x0c, 0x20, 0x04, 0x20, 0x04, 0x20, 0x04, 0x20, 0x04,
+	0x20, 0x04, 0x20, 0x04, 0x20, 0x04, 0x20, 0x04, 0x30, 0x0c, 0x3f, 0xfc, 0x00, 0x00, 0x00, 0x00};
+// 'pixil-layer-os', 16x16px
+const unsigned char epd_bitmap_pixil_layer_os[] PROGMEM = {
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x80, 0x02, 0xc0, 0x03, 0x40, 0x02, 0xc0,
+	0x03, 0x40, 0x02, 0xc0, 0x03, 0x40, 0x01, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+// 'pixil-layer-shift', 16x16px
+const unsigned char epd_bitmap_pixil_layer_shift[] PROGMEM = {
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x80, 0x02, 0x40, 0x02, 0x00, 0x01, 0x00,
+	0x00, 0x80, 0x00, 0x40, 0x02, 0x40, 0x01, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+
+// Array of all bitmaps for convenience. (Total bytes used to store images in PROGMEM = 288)
+const int epd_bitmap_allArray_LEN = 6;
+const unsigned char *epd_bitmap_allArray[6] = {
+	epd_bitmap_pixil_layer_alt,
+	epd_bitmap_pixil_layer_base,
+	epd_bitmap_pixil_layer_control,
+	epd_bitmap_pixil_layer_highlight,
+	epd_bitmap_pixil_layer_os,
+	epd_bitmap_pixil_layer_shift};
 
 void setup()
 {
@@ -82,7 +100,7 @@ void setup()
 			; // Don't proceed, loop forever
 	}
 
-	testdrawbitmap();
+	drawModKeys();
 	delay(1000);
 
 	hasShift = false;
@@ -90,7 +108,7 @@ void setup()
 	hasControl = false;
 	hasOsGui = false;
 
-	testdrawbitmap();
+	drawModKeys();
 }
 
 void loop()
@@ -109,6 +127,7 @@ void loop()
 				{ // Report active key state : IDLE, PRESSED, HOLD, or RELEASED
 				case PRESSED:
 					Keyboard.press(kpd.key[i].kchar);
+					idleTime = 0;
 				case HOLD:
 					switch (keyCheck)
 					{
@@ -161,55 +180,56 @@ void loop()
 	{
 	}
 
-	testdrawbitmap();
+
+	if (idleTime < 2000) {
+		drawModKeys();
+		idleTime++;
+	} else {
+		display.clearDisplay();
+		display.display();
+	}
+
+	delay(1);
 } // End loop
 
-void testdrawbitmap()
+void drawModKeys()
 {
 	display.clearDisplay();
 
-	if (hasShift) {
-		display.drawBitmap(
-			5 + (LOGO_WIDTH * 0),
-			(display.height() - LOGO_HEIGHT) / 2,
-			logo_bmp,
-			LOGO_WIDTH,
-			LOGO_HEIGHT,
-			1);
-	}
-
-	if (hasAlt)
-	{
-		display.drawBitmap(
-			5 + (LOGO_WIDTH * 1),
-			(display.height() - LOGO_HEIGHT) / 2,
-			logo_bmp,
-			LOGO_WIDTH,
-			LOGO_HEIGHT,
-			1);
-	}
-
-	if (hasControl)
-	{
-		display.drawBitmap(
-			5 + (LOGO_WIDTH * 2),
-			(display.height() - LOGO_HEIGHT) / 2,
-			logo_bmp,
-			LOGO_WIDTH,
-			LOGO_HEIGHT,
-			1);
-	}
-
-	if (hasOsGui)
-	{
-		display.drawBitmap(
-			5 + (LOGO_WIDTH * 3),
-			(display.height() - LOGO_HEIGHT) / 2,
-			logo_bmp,
-			LOGO_WIDTH,
-			LOGO_HEIGHT,
-			1);
-	}
+	drawModKey(epd_bitmap_pixil_layer_shift, hasShift, 0, 0);
+	drawModKey(epd_bitmap_pixil_layer_alt, hasAlt, 1, 0);
+	drawModKey(epd_bitmap_pixil_layer_control, hasControl, 0, 1);
+	drawModKey(epd_bitmap_pixil_layer_os, hasOsGui, 1, 1);
 
 	display.display();
+}
+
+void drawModKey(const uint8_t *bitmap, bool hasModkey, int row, int column)
+{
+	display.drawBitmap(
+		(MOD_ICON_HEIGHT * row),
+		(MOD_ICON_WIDTH * column),
+		epd_bitmap_pixil_layer_base,
+		MOD_ICON_WIDTH,
+		MOD_ICON_HEIGHT,
+		1);
+
+	if (hasModkey)
+	{
+		display.drawBitmap(
+			(MOD_ICON_HEIGHT * row),
+			(MOD_ICON_WIDTH * column),
+			epd_bitmap_pixil_layer_highlight,
+			MOD_ICON_WIDTH,
+			MOD_ICON_HEIGHT,
+			1);
+	}
+
+	display.drawBitmap(
+		(MOD_ICON_HEIGHT * row),
+		(MOD_ICON_WIDTH * column),
+		bitmap,
+		MOD_ICON_WIDTH,
+		MOD_ICON_HEIGHT,
+		1);
 }
